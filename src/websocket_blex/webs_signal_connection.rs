@@ -2,7 +2,7 @@ use websocket::{ClientBuilder, OwnedMessage};
 use log::{debug, error, info};
 
 pub fn connect_to_signaling() {
-    let mut client = ClientBuilder::new("ws://signal-service-m7vo.onrender.com/connect/v1/mediaServer/tatatest")
+    let mut client = ClientBuilder::new("wss://signal-service-m7vo.onrender.com/connect/v1/mediaServer/tatatest2")
         .unwrap()
         .add_protocol("rust-websocket")
         .connect_insecure()
