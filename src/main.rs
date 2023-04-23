@@ -1,8 +1,8 @@
 
 use log::{debug, error, info};
 use env_logger::Env;
-mod websocket;
-use websocket::signal_connection::connect_to_signaling;
+mod websocket_blex;
+use websocket_blex::webs_signal_connection::connect_to_signaling;
 
 
 fn main() {
