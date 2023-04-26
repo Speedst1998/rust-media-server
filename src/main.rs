@@ -1,11 +1,10 @@
-
-use log::{info};
 use env_logger::Env;
-mod websocket;
-use websocket::signal_connection::connect_to_signaling;
+use log::info;
+mod application;
+mod service;
+
 fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
-    connect_to_signaling();
-    // connect_to_signaling();
-    info!("Hello, world!");
+    info!("Launching app!");
+    // application::run();
 }
