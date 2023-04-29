@@ -26,7 +26,7 @@ impl<'a> PingerJob<'a> {
 
     pub fn new(socket_manager: Option<SocketManager>) -> PingerJob {
         PingerJob {
-            socket_manager: socket_manager,
+            socket_manager,
             hasPonged: false,
         }
     }

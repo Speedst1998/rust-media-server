@@ -1,12 +1,14 @@
-use log::{debug, info};
-use tungstenite::{client, Message};
+use std::net::TcpStream;
+
+use log::info;
+use tungstenite::{client, stream::MaybeTlsStream, WebSocket};
 use url::Url;
 
-pub fn connect_to_signaling() {
+pub fn connect_to_signaling() -> WebSocket<MaybeTlsStream<TcpStream>> {
     let url = Url::parse("wss://signal-service-m7vo.onrender.com/connect/v1/mediaServer/tatatest")
         .unwrap();
     // connect_with_config
-    let (mut socket, response) = client::connect_with_config(url, None, 1).expect("Can't connect");
+    let (socket, response) = client::connect_with_config(url, None, 1).expect("Can't connect");
 
     info!("Connected to the server");
     info!("Response HTTP code: {}", response.status());
@@ -15,16 +17,17 @@ pub fn connect_to_signaling() {
         info!("* {}", header);
     }
 
-    loop {
-        debug!("Waiting for message");
-        let msg = socket.read_message().unwrap();
-        debug!("Received: {}", msg);
-        socket
-            .write_message(Message::Text(msg.to_string()))
-            .unwrap();
-    }
+    // loop {
+    //     debug!("Waiting for message");
+    //     let msg = socket.read_message().unwrap();
+    //     debug!("Received: {}", msg);
+    //     socket
+    //         .write_message(Message::Text(msg.to_string()))
+    //         .unwrap();
+    // }
+    socket
 }
 
-pub fn test(){
-    print!("in here") 
+pub fn test() {
+    print!("in here")
 }
