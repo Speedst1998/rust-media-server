@@ -1,7 +1,7 @@
-use crate::service::websocket::socket_manager::MessageType::Offer;
-use std::{error::Error, net::TcpStream};
+use std::{net::TcpStream};
 use tungstenite::{stream::MaybeTlsStream, WebSocket};
-
+use serde::{Deserialize, Serialize};
+use serde_json::Result;
 use super::messaging::{answer_generator::AnswerGenerator, pinger_job::PingerJob};
 
 enum MessageType {
@@ -14,6 +14,20 @@ pub struct SocketManager<'a> {
     answer_generator: Option<&'a AnswerGenerator<'a>>,
     pinger_job: Option<&'a PingerJob<'a>>,
     socket: WebSocket<MaybeTlsStream<TcpStream>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SDPOffer  {
+    description: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type")]
+enum Message {
+    #[serde(rename = "offer")]
+    SDPOffer(SDPOffer),
+    #[serde(rename = "pong")]
+    Pong,
 }
 
 impl<'a> SocketManager<'a> {
@@ -41,18 +55,12 @@ impl<'a> SocketManager<'a> {
         //TODO : Have a wrapper that converts the websocket Message to our MessageType Enum
         let msg = self.socket.read_message();
         match msg {
-            Ok(unwrapped_message) => self
-                .answer_generator
-                .unwrap()
-                .notify(unwrapped_message.to_string()),
+            Ok(unwrapped_message) => {
+                let message: Message = serde_json::from_str(unwrapped_message.into_data()).unwrap();
+            },
             Err(err) => {
                 log::error!("Error is {}", err);
             }
         };
-
-        // match msg {
-        //     Offer(offer) => self.answer_generator?.notify(offer),
-        // };
     }
 }
-
