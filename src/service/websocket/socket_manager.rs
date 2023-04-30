@@ -1,14 +1,14 @@
-use std::{net::TcpStream};
-use tungstenite::{stream::MaybeTlsStream, WebSocket};
+use super::messaging::{answer_generator::AnswerGenerator, pinger_job::PingerJob};
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
-use super::messaging::{answer_generator::AnswerGenerator, pinger_job::PingerJob};
+use std::net::TcpStream;
+use tungstenite::{stream::MaybeTlsStream, WebSocket};
 
-enum MessageType {
-    Offer(String),
-    Ping,
-    Pong,
-}
+// enum MessageType {
+//     Offer(String),
+//     Ping,
+//     Pong,
+// }
 
 pub struct SocketManager<'a> {
     answer_generator: Option<&'a AnswerGenerator<'a>>,
@@ -17,7 +17,7 @@ pub struct SocketManager<'a> {
 }
 
 #[derive(Debug, Deserialize)]
-struct SDPOffer  {
+struct SDPOfferStruct {
     description: String,
 }
 
@@ -25,7 +25,7 @@ struct SDPOffer  {
 #[serde(tag = "type")]
 enum Message {
     #[serde(rename = "offer")]
-    SDPOffer(SDPOffer),
+    SDPOffer(SDPOfferStruct),
     #[serde(rename = "pong")]
     Pong,
 }
@@ -56,8 +56,14 @@ impl<'a> SocketManager<'a> {
         let msg = self.socket.read_message();
         match msg {
             Ok(unwrapped_message) => {
-                let message: Message = serde_json::from_str(unwrapped_message.into_data()).unwrap();
-            },
+                log::info!("{}", unwrapped_message);
+                let message: Message =
+                    serde_json::from_str(&unwrapped_message.to_string()).unwrap();
+                match message {
+                    Message::SDPOffer(offer) => log::info!("{}", offer.description),
+                    Message::Pong => log::info!("pong"),
+                }
+            }
             Err(err) => {
                 log::error!("Error is {}", err);
             }

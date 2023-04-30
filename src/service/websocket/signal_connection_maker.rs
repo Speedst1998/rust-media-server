@@ -4,6 +4,7 @@ use log::info;
 use tungstenite::{client, stream::MaybeTlsStream, WebSocket};
 use url::Url;
 
+//"wss://signal-service-m7vo.onrender.com/connect/v1/mediaServer/tatatest"
 pub fn connect_to_signaling() -> WebSocket<MaybeTlsStream<TcpStream>> {
     let url = Url::parse("wss://signal-service-m7vo.onrender.com/connect/v1/mediaServer/tatatest")
         .unwrap();
