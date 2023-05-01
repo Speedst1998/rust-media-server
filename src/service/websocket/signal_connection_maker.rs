@@ -6,8 +6,7 @@ use url::Url;
 
 //"wss://signal-service-m7vo.onrender.com/connect/v1/mediaServer/tatatest"
 pub fn connect_to_signaling() -> WebSocket<MaybeTlsStream<TcpStream>> {
-    let url = Url::parse("wss://signal-service-m7vo.onrender.com/connect/v1/mediaServer/tatatest")
-        .unwrap();
+    let url = Url::parse("ws://localhost:8050/connect/v1/mediaServer/tatatest").unwrap();
     // connect_with_config
     let (socket, response) = client::connect_with_config(url, None, 1).expect("Can't connect");
 

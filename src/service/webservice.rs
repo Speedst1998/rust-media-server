@@ -8,7 +8,7 @@ use crate::service::websocket::signal_connection_maker;
 pub struct WebService {}
 use websocket::signal_connection_maker::test as nottest;
 
-pub fn test() {
+pub async fn test() {
     nottest();
     let answer_generator: AnswerGenerator = AnswerGenerator {
         socket_manager: None,
@@ -23,5 +23,5 @@ pub fn test() {
         .set_answer_generator(&answer_generator)
         .set_pinger_job(&pinger_job);
 
-    socket_manager.listen();
+    socket_manager.listen().await;
 }

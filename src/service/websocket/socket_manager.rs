@@ -1,14 +1,9 @@
 use super::messaging::{answer_generator::AnswerGenerator, pinger_job::PingerJob};
+use clap::ErrorKind;
 use serde::{Deserialize, Serialize};
-use serde_json::Result;
 use std::net::TcpStream;
-use tungstenite::{stream::MaybeTlsStream, WebSocket};
-
-// enum MessageType {
-//     Offer(String),
-//     Ping,
-//     Pong,
-// }
+use tungstenite::Error as WsError;
+use tungstenite::{stream::MaybeTlsStream, Message, WebSocket};
 
 pub struct SocketManager<'a> {
     answer_generator: Option<&'a AnswerGenerator<'a>>,
@@ -17,15 +12,15 @@ pub struct SocketManager<'a> {
 }
 
 #[derive(Debug, Deserialize)]
-struct SDPOfferStruct {
+struct SDPOffer {
     description: String,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
-enum Message {
+enum ReceivedMessage {
     #[serde(rename = "offer")]
-    SDPOffer(SDPOfferStruct),
+    SDPOffer(SDPOffer),
     #[serde(rename = "pong")]
     Pong,
 }
@@ -51,22 +46,33 @@ impl<'a> SocketManager<'a> {
         self
     }
 
-    pub fn listen(&mut self) {
+    pub async fn listen(&mut self) {
         //TODO : Have a wrapper that converts the websocket Message to our MessageType Enum
-        let msg = self.socket.read_message();
-        match msg {
-            Ok(unwrapped_message) => {
-                log::info!("{}", unwrapped_message);
-                let message: Message =
-                    serde_json::from_str(&unwrapped_message.to_string()).unwrap();
-                match message {
-                    Message::SDPOffer(offer) => log::info!("{}", offer.description),
-                    Message::Pong => log::info!("pong"),
+        SocketManager::blocking_listen(&mut self.socket);
+    }
+
+    pub fn blocking_listen(
+        socket: &mut WebSocket<MaybeTlsStream<TcpStream>>,
+    ) -> tungstenite::Result<(), WsError> {
+        loop {
+            let msg = socket.read_message();
+            if msg.is_err() {
+                let err = msg.unwrap_err();
+                log::error!("Error is {}", err);
+                match err {
+                    Io => return Err(err),
+                    _ => continue,
                 }
             }
-            Err(err) => {
-                log::error!("Error is {}", err);
+            let deserialized: ReceivedMessage =
+                serde_json::from_str(&msg.unwrap().to_string()).unwrap();
+
+            match deserialized {
+                ReceivedMessage::SDPOffer(offer) => {
+                    log::info!("{}", offer.description)
+                }
+                ReceivedMessage::Pong => log::info!("pong"),
             }
-        };
+        }
     }
 }

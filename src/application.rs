@@ -1,5 +1,5 @@
 use crate::service;
 
-pub fn test(){
-    service::webservice::test();
+pub async fn test() {
+    service::webservice::test().await;
 }
