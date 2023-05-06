@@ -1,7 +1,9 @@
 use super::messaging::{answer_generator::AnswerGenerator, pinger_job::PingerJob};
 use crate::service::websocket::signal_connection_maker::SignalConnectionMaker;
+use async_std::task;
 use serde::Deserialize;
 use std::net::TcpStream;
+use std::time::Duration;
 use tungstenite::{stream::MaybeTlsStream, Error::Io, WebSocket};
 
 pub struct SocketManager<'a> {
@@ -27,7 +29,8 @@ enum ReceivedMessage {
 
 impl<'a> SocketManager<'a> {
     pub fn new(socket_maker: SignalConnectionMaker) -> SocketManager<'a> {
-        let socket = socket_maker.connect_to_signaling();
+        // TODO keep trying to connect if it results in an error
+        let socket = socket_maker.connect_to_signaling().unwrap();
         SocketManager {
             answer_generator: None,
             pinger_job: None,
@@ -55,7 +58,12 @@ impl<'a> SocketManager<'a> {
             match SocketManager::blocking_listen(&mut self.socket) {
                 Ok(_) => panic!("SocketManager Listener returned unexpected OK"),
                 Err(_) => {
-                    self.socket = self.socket_maker.connect_to_signaling();
+                    task::sleep(Duration::from_secs(5)).await;
+                    let socket_result = self.socket_maker.connect_to_signaling();
+                    if socket_result.is_err() {
+                        continue;
+                    }
+                    self.socket = socket_result.unwrap();
                 }
             }
         }
@@ -68,7 +76,6 @@ impl<'a> SocketManager<'a> {
             let msg = socket.read_message();
             if msg.is_err() {
                 let err = msg.unwrap_err();
-                log::error!("Error is {}", err);
                 match err {
                     Io(e) => return Err(e),
                     _ => continue,
