@@ -4,7 +4,7 @@ use async_std::task;
 use serde::Deserialize;
 use std::net::TcpStream;
 use std::time::Duration;
-use tungstenite::{stream::MaybeTlsStream, Error::Io, WebSocket};
+use tungstenite::{stream::MaybeTlsStream, Error::Io, Message, WebSocket};
 
 pub struct SocketManager<'a> {
     answer_generator: Option<AnswerGenerator<'a>>,
@@ -20,11 +20,22 @@ struct SDPOffer {
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
-enum ReceivedMessage {
+enum IncomingMessage {
     #[serde(rename = "offer")]
     SDPOffer(SDPOffer),
     #[serde(rename = "pong")]
     Pong,
+}
+
+#[derive(strum_macros::Display)]
+pub enum OutgoingType {
+    Answer,
+    Error,
+}
+
+pub struct OutgoingMessage {
+    pub message_type: OutgoingType,
+    pub message: String,
 }
 
 impl<'a> SocketManager<'a> {
@@ -55,9 +66,10 @@ impl<'a> SocketManager<'a> {
     pub async fn listen(&mut self) {
         //TODO : Have a wrapper that converts the websocket Message to our MessageType Enum
         loop {
-            match SocketManager::blocking_listen(&mut self.socket) {
+            match SocketManager::blocking_listen(self) {
                 Ok(_) => panic!("SocketManager Listener returned unexpected OK"),
                 Err(_) => {
+                    // TODO bring this out into its own function
                     task::sleep(Duration::from_secs(5)).await;
                     let socket_result = self.socket_maker.connect_to_signaling();
                     if socket_result.is_err() {
@@ -69,11 +81,9 @@ impl<'a> SocketManager<'a> {
         }
     }
 
-    fn blocking_listen(
-        socket: &mut WebSocket<MaybeTlsStream<TcpStream>>,
-    ) -> Result<(), std::io::Error> {
+    fn blocking_listen(&mut self) -> Result<(), std::io::Error> {
         loop {
-            let msg = socket.read_message();
+            let msg = self.socket.read_message();
             if msg.is_err() {
                 let err = msg.unwrap_err();
                 match err {
@@ -81,15 +91,30 @@ impl<'a> SocketManager<'a> {
                     _ => continue,
                 }
             }
-            let deserialized: ReceivedMessage =
+            let deserialized: IncomingMessage =
                 serde_json::from_str(&msg.unwrap().to_string()).unwrap();
 
             match deserialized {
-                ReceivedMessage::SDPOffer(offer) => {
-                    log::info!("{}", offer.description)
+                IncomingMessage::SDPOffer(offer) => {
+                    log::info!("{}", offer.description);
+                    // let test = self.answer_generator.as_mut();
+
+                    self.answer_generator
+                        .as_ref()
+                        .unwrap()
+                        .generate_answer(offer.description);
                 }
-                ReceivedMessage::Pong => log::info!("pong"),
+                IncomingMessage::Pong => log::info!("pong"),
             }
         }
+    }
+
+    pub fn send_message_to_signal_sever(&mut self, message: OutgoingMessage) {
+        log::info!(
+            "type : {} message: {}",
+            message.message_type,
+            message.message
+        );
+        self.socket.write_message(Message::Text(message.message));
     }
 }

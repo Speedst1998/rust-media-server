@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.70"
 tokio = {version = "1.27.0", features = ["full"]}
+strum_macros = "0.24.3"
 async-std = "1.12.0"
 webrtc = "0.7.1"
 clap = "3.0"
