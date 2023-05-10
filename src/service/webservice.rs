@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 
 pub struct WebService {}
 
-pub async fn test() {
+pub async fn init() {
     let mut answer_generator: AnswerGenerator = AnswerGenerator {
         socket_manager: None,
         answer_service: "string".to_owned(),
