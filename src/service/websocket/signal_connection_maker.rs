@@ -1,7 +1,7 @@
 use std::net::TcpStream;
 
 use log::info;
-use tungstenite::{client, stream::MaybeTlsStream, Error, Result, WebSocket};
+use tungstenite::{client, stream::MaybeTlsStream, Result, WebSocket};
 use url::Url;
 
 //"wss://signal-service-m7vo.onrender.com/connect/v1/mediaServer/tatatest"
@@ -9,7 +9,9 @@ pub struct SignalConnectionMaker {}
 
 impl SignalConnectionMaker {
     pub fn connect_to_signaling(&self) -> Result<WebSocket<MaybeTlsStream<TcpStream>>> {
-        let url = Url::parse("ws://localhost:8050/connect/v1/mediaServer/tatatest").unwrap();
+        let url =
+            Url::parse("wss://signal-service-m7vo.onrender.com/connect/v1/mediaServer/tatatest")
+                .unwrap();
         // connect_with_config
         match client::connect_with_config(url, None, 1) {
             Ok((socket, response)) => {

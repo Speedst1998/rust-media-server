@@ -1,8 +1,8 @@
-use crate::service::websocket::socket_manager::{self, SocketManager};
+use crate::service::websocket::socket_manager::SocketManager;
 
 pub struct PingerJob<'a> {
     pub socket_manager: Option<&'a SocketManager<'a>>,
-    hasPonged: bool,
+    has_ponged: bool,
 }
 
 impl<'a> PingerJob<'a> {
@@ -15,22 +15,22 @@ impl<'a> PingerJob<'a> {
     }
 
     pub fn ping(&mut self) {
-        self.hasPonged = true;
+        self.has_ponged = true;
         //self.socket_manager.send("ping");
         // wait 5 seconds
-        if !self.hasPonged {
+        if !self.has_ponged {
             //self.socket_manager.reconnect
         }
     }
 
     pub fn notify(&mut self) {
-        self.hasPonged = true;
+        self.has_ponged = true;
     }
 
     pub fn new(socket_manager: Option<&'a SocketManager<'a>>) -> PingerJob {
         PingerJob {
             socket_manager,
-            hasPonged: false,
+            has_ponged: false,
         }
     }
 }

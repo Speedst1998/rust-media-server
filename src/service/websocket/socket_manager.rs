@@ -66,7 +66,7 @@ impl<'a> SocketManager<'a> {
     pub async fn listen(&mut self) {
         //TODO : Have a wrapper that converts the websocket Message to our MessageType Enum
         loop {
-            match SocketManager::blocking_listen(self) {
+            match SocketManager::blocking_listen(self).await {
                 Ok(_) => panic!("SocketManager Listener returned unexpected OK"),
                 Err(_) => {
                     // TODO bring this out into its own function
@@ -81,7 +81,7 @@ impl<'a> SocketManager<'a> {
         }
     }
 
-    fn blocking_listen(&mut self) -> Result<(), std::io::Error> {
+    async fn blocking_listen(&mut self) -> Result<(), std::io::Error> {
         loop {
             let msg = self.socket.read_message();
             if msg.is_err() {
@@ -96,25 +96,33 @@ impl<'a> SocketManager<'a> {
 
             match deserialized {
                 IncomingMessage::SDPOffer(offer) => {
-                    log::info!("{}", offer.description);
+                    log::info!("Offer Description received : {}", offer.description);
                     // let test = self.answer_generator.as_mut();
 
-                    self.answer_generator
+                    let answer = self
+                        .answer_generator
                         .as_ref()
                         .unwrap()
                         .generate_answer(offer.description);
+
+                    self.send_message_to_signal_sever(answer)
                 }
                 IncomingMessage::Pong => log::info!("pong"),
             }
         }
     }
 
-    pub fn send_message_to_signal_sever(&mut self, message: OutgoingMessage) {
+    fn send_message_to_signal_sever(&mut self, message: OutgoingMessage) {
         log::info!(
             "type : {} message: {}",
             message.message_type,
             message.message
         );
-        self.socket.write_message(Message::Text(message.message));
+        match self.socket.write_message(Message::Text(message.message)) {
+            Ok(_) => {
+                log::info!("Message Written");
+            }
+            Err(e) => log::error!("Failed to write message : {}", e),
+        }
     }
 }
