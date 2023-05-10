@@ -7,7 +7,7 @@ use std::time::Duration;
 use tungstenite::{stream::MaybeTlsStream, Error::Io, Message, WebSocket};
 
 pub struct SocketManager<'a> {
-    answer_generator: Option<AnswerGenerator<'a>>,
+    answer_generator: Option<AnswerGenerator>,
     pinger_job: Option<PingerJob<'a>>,
     socket: WebSocket<MaybeTlsStream<TcpStream>>,
     socket_maker: SignalConnectionMaker,
@@ -52,7 +52,7 @@ impl<'a> SocketManager<'a> {
 
     pub fn set_answer_generator(
         &mut self,
-        answer_generator: AnswerGenerator<'a>,
+        answer_generator: AnswerGenerator,
     ) -> &mut SocketManager<'a> {
         self.answer_generator = Some(answer_generator);
         self

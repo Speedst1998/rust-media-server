@@ -1,24 +1,14 @@
 use log::info;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
-use crate::service::websocket::socket_manager::{OutgoingMessage, OutgoingType, SocketManager};
+use crate::service::websocket::socket_manager::{OutgoingMessage, OutgoingType};
 
-pub struct AnswerGenerator<'a> {
-    pub socket_manager: Option<Arc<Mutex<SocketManager<'a>>>>,
+pub struct AnswerGenerator {
     pub answer_service: String,
 }
 
-impl<'a> AnswerGenerator<'a> {
+impl AnswerGenerator {
     pub fn notify(&self, msg: String) {
         log::info!("Notified AnswerGenerator with msg {}", msg);
-    }
-    pub fn set_socket_manager(
-        &mut self,
-        socket_manager: Arc<Mutex<SocketManager<'a>>>,
-    ) -> &mut AnswerGenerator<'a> {
-        self.socket_manager = Some(socket_manager);
-        self
     }
 
     pub fn generate_answer(&self, offer: String) -> OutgoingMessage {
