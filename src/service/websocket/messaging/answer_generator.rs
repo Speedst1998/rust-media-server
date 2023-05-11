@@ -1,19 +1,32 @@
-use crate::service::websocket::socket_manager::SocketManager;
+use log::info;
 
-pub struct AnswerGenerator<'a> {
-    pub socket_manager: Option<&'a SocketManager<'a>>,
+use crate::service::websocket::socket_manager::{OutgoingMessage, OutgoingType};
+
+pub struct AnswerGenerator {
     pub answer_service: String,
 }
 
-impl<'a> AnswerGenerator<'a> {
+impl AnswerGenerator {
     pub fn notify(&self, msg: String) {
         log::info!("Notified AnswerGenerator with msg {}", msg);
     }
-    pub fn set_socket_manager(
-        &mut self,
-        socket_manager: &'a SocketManager<'a>,
-    ) -> &mut AnswerGenerator<'a> {
-        self.socket_manager = Some(socket_manager);
-        self
+
+    pub fn generate_answer(&self, offer: String) -> OutgoingMessage {
+        let generated_answer = Ok(offer + "answer");
+        let outgoing_message = match generated_answer {
+            Ok(answer) => {
+                info!("Generating media server sdp answer : {}", answer);
+                OutgoingMessage {
+                    message_type: OutgoingType::Answer,
+                    message: answer,
+                }
+            }
+            Err(err) => OutgoingMessage {
+                message_type: OutgoingType::Error,
+                message: err,
+            },
+        };
+
+        outgoing_message
     }
 }
