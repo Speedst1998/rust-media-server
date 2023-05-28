@@ -1,4 +1,5 @@
 use super::messaging::{answer_generator::AnswerGenerator, pinger_job::PingerJob};
+use crate::clients::public_ip;
 use crate::server_constants;
 use crate::service::websocket::signal_connection_maker::SignalConnectionMaker;
 use async_std::task;
@@ -84,16 +85,6 @@ impl<'a> SocketManager<'a> {
         }
     }
 
-    async fn get_public_ip(&self) -> String {
-        let result = reqwest::get("http://whatismyip.akamai.com/")
-            .await
-            .unwrap()
-            .text()
-            .await
-            .unwrap();
-        result
-    }
-
     async fn blocking_listen(&mut self) -> ResultOrError<(), std::io::Error> {
         loop {
             let msg = self.socket.read_message();
@@ -110,7 +101,7 @@ impl<'a> SocketManager<'a> {
             match deserialized {
                 IncomingMessage::SDPOffer(offer) => {
                     log::info!("Offer Description received : {}", offer.description);
-                    let ip = self.get_public_ip().await;
+                    let ip = public_ip::get_public_ip().await;
 
                     self.send_message_to_signal_sever(OutgoingMessage {
                         message_type: OutgoingType::Answer,
