@@ -1,4 +1,5 @@
 use crate::api::routes;
+use crate::folder_watcher::watcher;
 use crate::server_constants;
 use crate::service;
 use actix_cors::Cors;
@@ -7,6 +8,12 @@ use log::info;
 
 pub async fn start() -> std::io::Result<()> {
     service::webservice::init().await;
+
+    let mut watcher: watcher::FolderWatcher = watcher::FolderWatcher::new().unwrap();
+    watcher
+        .async_watch(std::path::Path::new("/home/taharmustapha/dev/"))
+        .await
+        .unwrap();
     info!(
         "Starting web api at {}:{}",
         server_constants::SERVER_IP,
