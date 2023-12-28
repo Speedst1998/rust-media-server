@@ -6,7 +6,9 @@ pub mod api;
 pub mod application;
 pub mod clients;
 pub mod constants;
+pub mod db;
 pub mod folder_watcher;
+pub mod gui;
 pub mod service;
 
 #[actix_web::main]
