@@ -1,3 +1,4 @@
+use r2d2::PooledConnection;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::params;
 use std::thread;
@@ -16,7 +17,7 @@ impl DatabaseHandler {
     pub fn new(manager: SqliteConnectionManager) -> Self {
         let pool: r2d2::Pool<SqliteConnectionManager> = r2d2::Pool::new(manager).unwrap();
 
-        TABLES.iter().for_each(|table| {
+        TABLES.iter().for_each(|(table_name, table)| {
             pool.get()
                 .unwrap()
                 .execute(&table.creation_string, params![])
@@ -44,11 +45,14 @@ impl DatabaseHandler {
 
         let conn = pool.get().unwrap();
         conn.execute(
-            "INSERT INTO Folders_To_Watch (folder) VALUES (?)",
+            "INSERT INTO WatchedFolders (path) VALUES (?)",
             &["/somepath"],
-        )
-        .unwrap();
+        );
 
         DatabaseHandler { pool }
+    }
+
+    pub fn get_connection(&self) -> PooledConnection<SqliteConnectionManager> {
+        self.pool.get().unwrap()
     }
 }

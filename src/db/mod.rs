@@ -1,2 +1,3 @@
 pub mod databasehandler;
-mod tables;
+pub mod tables;
+pub mod watched_folders_table;
