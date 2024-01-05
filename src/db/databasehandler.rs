@@ -23,31 +23,6 @@ impl DatabaseHandler {
                 .execute(&table.creation_string, params![])
                 .unwrap();
         });
-        pool.get()
-            .unwrap()
-            .execute("CREATE TABLE IF NOT EXISTS foo (bar INTEGER)", params![])
-            .unwrap();
-
-        let _ = (0..10)
-            .map(|i| {
-                let pool = pool.clone();
-                thread::spawn(move || {
-                    let conn = pool.get().unwrap();
-                    conn.execute("INSERT INTO foo (bar) VALUES (?)", &[&i])
-                        .unwrap();
-                })
-            })
-            .collect::<Vec<_>>()
-            .into_iter()
-            .map(thread::JoinHandle::join);
-        // .collect::<Result<_, _>>()
-        // .unwrap();
-
-        let conn = pool.get().unwrap();
-        conn.execute(
-            "INSERT INTO WatchedFolders (path) VALUES (?)",
-            &["/somepath"],
-        );
 
         DatabaseHandler { pool }
     }

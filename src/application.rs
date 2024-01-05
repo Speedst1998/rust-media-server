@@ -18,6 +18,8 @@ pub async fn start() -> std::io::Result<()> {
     service::webservice::init().await;
 
     let db_handler = DatabaseHandler::new(SqliteConnectionManager::file("file.db"));
+    //Pooled connection probably should not be in the db_handler if we just get the connection from it
+    //Maybe the WatchedFoldersDb should take a db handler
     let conn: r2d2::PooledConnection<SqliteConnectionManager> = db_handler.get_connection();
     let watched_folders_db = WatchedFoldersDb::new(conn);
     let created_watched_folder = watched_folders_db
