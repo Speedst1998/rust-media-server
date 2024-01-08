@@ -1,5 +1,4 @@
 use crate::api::routes;
-use crate::db;
 use crate::db::databasehandler::DatabaseHandler;
 use crate::db::watched_folders_table::WatchedFoldersDb;
 use crate::folder_watcher::watcher;
@@ -8,10 +7,13 @@ use crate::gui::page::Flags;
 use crate::server_constants;
 use crate::service;
 use actix_cors::Cors;
+
 use actix_web::{App, HttpServer};
-use log::error;
+use anyhow::Ok;
+use iced::futures::TryFutureExt;
 use log::info;
 use r2d2_sqlite::SqliteConnectionManager;
+use tokio::task;
 use std::path::Path;
 
 pub async fn start() -> std::io::Result<()> {
@@ -26,18 +28,20 @@ pub async fn start() -> std::io::Result<()> {
         .create(&"./videos".to_owned())
         .map(|succ| info!("{}", succ.path))
         .map_err(|err| info!("Problem parsing arguments: {err}"));
-    info!("test");
-    page::start(Flags { watched_folders_db }).unwrap();
+
+    let ui = task::spawn(async move {
+        info!("Starting ui.");
+        page::start(Flags { watched_folders_db }).unwrap();
+    }).map_err(anyhow::Error::from);
 
     let mut watcher: watcher::FolderWatcher = watcher::FolderWatcher::new().unwrap();
-    watcher.async_watch(Path::new("./videos")).await.unwrap();
-    info!(
-        "Starting web api at {}:{}",
-        server_constants::SERVER_IP,
-        server_constants::SERVER_PORT
-    );
 
-    HttpServer::new(|| {
+    let watch_task = task::spawn(async move {
+        info!("Starting folder watcher.");
+        watcher.async_watch(Path::new("./videos")).await.unwrap();
+    }).map_err(anyhow::Error::from);
+
+    let server= HttpServer::new(|| {
         let cors = Cors::default().allow_any_origin();
         App::new()
             .wrap(cors)
@@ -46,6 +50,22 @@ pub async fn start() -> std::io::Result<()> {
             .service(routes::hello::play_movie)
     })
     .bind((server_constants::SERVER_IP, server_constants::SERVER_PORT))?
-    .run()
-    .await
+    .run();
+
+    let server_handler = server.handle();
+
+    let server = tokio::spawn(async move {
+        info!(
+            "Starting web api at {}:{}.",
+            server_constants::SERVER_IP,
+            server_constants::SERVER_PORT
+        );
+    }).map_err(anyhow::Error::from);
+
+    let _ = tokio::try_join!(watch_task, ui, server);
+
+    server_handler.stop(false).await;
+
+    std::io::Result::Ok(())
+
 }
