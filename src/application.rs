@@ -14,10 +14,11 @@ use iced::futures::TryFutureExt;
 use log::info;
 use r2d2_sqlite::SqliteConnectionManager;
 use tokio::task;
+use std::any;
 use std::path::Path;
 
 pub async fn start() -> std::io::Result<()> {
-    service::webservice::init().await;
+    // service::webservice::init().await;
 
     let db_handler = DatabaseHandler::new(SqliteConnectionManager::file("file.db"));
     //Pooled connection probably should not be in the db_handler if we just get the connection from it
@@ -29,7 +30,7 @@ pub async fn start() -> std::io::Result<()> {
         .map(|succ| info!("{}", succ.path))
         .map_err(|err| info!("Problem parsing arguments: {err}"));
 
-    let ui = task::spawn(async move {
+    let ui = task::spawn_blocking(|| {
         info!("Starting ui.");
         page::start(Flags { watched_folders_db }).unwrap();
     }).map_err(anyhow::Error::from);
@@ -53,16 +54,20 @@ pub async fn start() -> std::io::Result<()> {
     .run();
 
     let server_handler = server.handle();
+    let server = server.map_err(anyhow::Error::from);
 
-    let server = tokio::spawn(async move {
-        info!(
-            "Starting web api at {}:{}.",
-            server_constants::SERVER_IP,
-            server_constants::SERVER_PORT
-        );
-    }).map_err(anyhow::Error::from);
+    // let server = tokio::spawn(async move {
+    //     info!(
+    //         "Starting web api at {}:{}.",
+    //         server_constants::SERVER_IP,
+    //         server_constants::SERVER_PORT
+    //     );
+    // }).map_err(anyhow::Error::from);
 
-    let _ = tokio::try_join!(watch_task, ui, server);
+    // while true {
+    //     ui.getEvent
+    // }
+    let _ = tokio::join!(watch_task, ui, server);
 
     server_handler.stop(false).await;
 
