@@ -8,14 +8,16 @@ use crate::server_constants;
 use crate::service;
 use actix_cors::Cors;
 
+use actix_web::rt;
 use actix_web::{App, HttpServer};
 use anyhow::Ok;
 use iced::futures::TryFutureExt;
 use log::info;
 use r2d2_sqlite::SqliteConnectionManager;
-use tokio::task;
 use std::any;
 use std::path::Path;
+use std::thread;
+use tokio::task;
 
 pub async fn start() -> std::io::Result<()> {
     // service::webservice::init().await;
@@ -30,19 +32,15 @@ pub async fn start() -> std::io::Result<()> {
         .map(|succ| info!("{}", succ.path))
         .map_err(|err| info!("Problem parsing arguments: {err}"));
 
-    let ui = task::spawn_blocking(|| {
-        info!("Starting ui.");
-        page::start(Flags { watched_folders_db }).unwrap();
-    }).map_err(anyhow::Error::from);
-
     let mut watcher: watcher::FolderWatcher = watcher::FolderWatcher::new().unwrap();
 
-    let watch_task = task::spawn(async move {
+    thread::spawn(move ||{
         info!("Starting folder watcher.");
-        watcher.async_watch(Path::new("./videos")).await.unwrap();
-    }).map_err(anyhow::Error::from);
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {watcher.async_watch(Path::new("./videos")).await.unwrap()});
+    });
 
-    let server= HttpServer::new(|| {
+    let server = HttpServer::new(|| {
         let cors = Cors::default().allow_any_origin();
         App::new()
             .wrap(cors)
@@ -50,27 +48,27 @@ pub async fn start() -> std::io::Result<()> {
             .service(routes::hello::movie)
             .service(routes::hello::play_movie)
     })
-    .bind((server_constants::SERVER_IP, server_constants::SERVER_PORT))?
+    .workers(4)
+    .bind((server_constants::SERVER_IP, server_constants::SERVER_PORT))
+    .unwrap()
     .run();
 
     let server_handler = server.handle();
-    let server = server.map_err(anyhow::Error::from);
 
-    // let server = tokio::spawn(async move {
-    //     info!(
-    //         "Starting web api at {}:{}.",
-    //         server_constants::SERVER_IP,
-    //         server_constants::SERVER_PORT
-    //     );
-    // }).map_err(anyhow::Error::from);
+    thread::spawn(move || {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        info!(
+            "Starting web api at {}:{}.",
+            server_constants::SERVER_IP,
+            server_constants::SERVER_PORT
+        );
+        runtime.block_on(async { server.await })
+    });
 
-    // while true {
-    //     ui.getEvent
-    // }
-    let _ = tokio::join!(watch_task, ui, server);
+    info!("Starting ui.");
+    page::start(Flags { watched_folders_db }).unwrap();
 
     server_handler.stop(false).await;
 
     std::io::Result::Ok(())
-
 }
