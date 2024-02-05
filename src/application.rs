@@ -5,19 +5,13 @@ use crate::folder_watcher::watcher;
 use crate::gui::page;
 use crate::gui::page::Flags;
 use crate::server_constants;
-use crate::service;
-use actix_cors::Cors;
 
-use actix_web::rt;
+use actix_cors::Cors;
 use actix_web::{App, HttpServer};
-use anyhow::Ok;
-use iced::futures::TryFutureExt;
 use log::info;
 use r2d2_sqlite::SqliteConnectionManager;
-use std::any;
 use std::path::Path;
 use std::thread;
-use tokio::task;
 
 pub async fn start() -> std::io::Result<()> {
     // service::webservice::init().await;
@@ -25,9 +19,11 @@ pub async fn start() -> std::io::Result<()> {
     let db_handler = DatabaseHandler::new(SqliteConnectionManager::file("file.db"));
     //Pooled connection probably should not be in the db_handler if we just get the connection from it
     //Maybe the WatchedFoldersDb should take a db handler
-    let conn: r2d2::PooledConnection<SqliteConnectionManager> = db_handler.get_connection();
-    let watched_folders_db = WatchedFoldersDb::new(conn);
-    let created_watched_folder = watched_folders_db
+    let pooled_connection = db_handler.get_connection();
+    let conn: &'static r2d2::PooledConnection<SqliteConnectionManager> = &pooled_connection;
+    let watched_folders_db = WatchedFoldersDb::new(&conn);
+
+    let _ = watched_folders_db
         .create(&"./videos".to_owned())
         .map(|succ| info!("{}", succ.path))
         .map_err(|err| info!("Problem parsing arguments: {err}"));

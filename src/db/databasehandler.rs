@@ -1,7 +1,6 @@
 use r2d2::PooledConnection;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::params;
-use std::thread;
 
 use super::tables::TABLES;
 

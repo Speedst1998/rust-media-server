@@ -40,4 +40,8 @@ impl<'a> FolderWatcher<'a> {
 
         Ok(())
     }
+    
+    pub fn add_path_to_watch<P: AsRef<Path>>(&mut self, path: P) -> notify::Result<()> {
+        self.watcher.watch(path.as_ref(), RecursiveMode::Recursive)
+    }
 }
