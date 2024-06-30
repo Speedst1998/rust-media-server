@@ -1,5 +1,5 @@
 use crate::api::routes;
-use crate::db::databasehandler::DatabaseHandler;
+use crate::db::databasehandler::{ConnectionProvider, DatabaseHandler};
 use crate::db::watched_folders_table::WatchedFoldersDb;
 use crate::folder_watcher::watcher;
 use crate::gui::page;
@@ -16,17 +16,18 @@ use log::info;
 use r2d2_sqlite::SqliteConnectionManager;
 use std::any;
 use std::path::Path;
+use std::sync::Arc;
 use std::thread;
 use tokio::task;
 
 pub async fn start() -> std::io::Result<()> {
     // service::webservice::init().await;
 
-    let db_handler = DatabaseHandler::new(SqliteConnectionManager::file("file.db"));
+    let db_handler = Arc::new(DatabaseHandler::new(SqliteConnectionManager::file("file.db")));
     //Pooled connection probably should not be in the db_handler if we just get the connection from it
     //Maybe the WatchedFoldersDb should take a db handler
     let conn: r2d2::PooledConnection<SqliteConnectionManager> = db_handler.get_connection();
-    let watched_folders_db = WatchedFoldersDb::new(conn);
+    let watched_folders_db = WatchedFoldersDb::new(db_handler.clone());
     let created_watched_folder = watched_folders_db
         .create(&"./videos".to_owned())
         .map(|succ| info!("{}", succ.path))
