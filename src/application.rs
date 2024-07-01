@@ -1,5 +1,6 @@
 use crate::api::routes;
 use crate::db::databasehandler::{ConnectionProvider, DatabaseHandler};
+use crate::db::videos_table::{self, VideosDb};
 use crate::db::watched_folders_table::WatchedFoldersDb;
 use crate::folder_watcher::watcher;
 use crate::gui::page;
@@ -28,6 +29,7 @@ pub async fn start() -> std::io::Result<()> {
     //Maybe the WatchedFoldersDb should take a db handler
     let conn: r2d2::PooledConnection<SqliteConnectionManager> = db_handler.get_connection();
     let watched_folders_db = WatchedFoldersDb::new(db_handler.clone());
+    let videos_table_db = VideosDb::new(db_handler.clone());
     let created_watched_folder = watched_folders_db
         .create(&"./videos".to_owned())
         .map(|succ| info!("{}", succ.path))
@@ -35,10 +37,20 @@ pub async fn start() -> std::io::Result<()> {
 
     let mut watcher: watcher::FolderWatcher = watcher::FolderWatcher::new().unwrap();
 
+    let c = watched_folders_db.list();
+
+    let n = c.unwrap();
+
+    let v = n.into_iter();
+
+    let b = v.map(|watched_folder| {
+        Path::new(watched_folder.path.as_str())
+    }).collect();
+
     thread::spawn(move ||{
         info!("Starting folder watcher.");
         let runtime = tokio::runtime::Runtime::new().unwrap();
-        runtime.block_on(async {watcher.async_watch(Path::new("./videos")).await.unwrap()});
+        runtime.block_on(async {watcher.async_watch(b).await.unwrap()});
     });
 
     let server = HttpServer::new(|| {

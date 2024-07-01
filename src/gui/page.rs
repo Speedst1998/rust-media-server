@@ -86,7 +86,7 @@ impl Application for Page {
             Message::SetPath(res) => {
                 match res {
                     Ok(path) => {
-                        self.watched_folders_db.create(&(path));
+                        self.watched_folders_db.create(&(path)).unwrap();
                         self.refresh_folders_list();
                         self.path = path;
                     }

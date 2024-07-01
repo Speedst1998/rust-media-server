@@ -1,13 +1,14 @@
 use log::info;
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
-use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
+use std::sync::{mpsc, Arc, Mutex};
 /// Async, futures channel based event watching
 pub struct FolderWatcher<'a> {
     folders_to_watch: &'a [&'a Path],
-    watcher: RecommendedWatcher,
+    watcher: Arc<Mutex<RecommendedWatcher>>,
     event_receiver: Receiver<Result<Event, notify::Error>>,
+    reset: bool,
 }
 
 impl<'a> FolderWatcher<'a> {
@@ -16,20 +17,29 @@ impl<'a> FolderWatcher<'a> {
 
         // Automatically select the best implementation for your platform.
         // You can also access each implementation directly e.g. INotifyWatcher.
-        let watcher = RecommendedWatcher::new(move |res| tx.send(res).unwrap(), Config::default())?;
+        let watcher = Arc::new(Mutex::new(RecommendedWatcher::new(
+            move |res| tx.send(res).unwrap(),
+            Config::default(),
+        )?));
 
         Ok(FolderWatcher {
             folders_to_watch: &[],
             watcher,
             event_receiver: rx,
+            reset: false,
         })
     }
 
-    pub async fn async_watch<P: AsRef<Path>>(&mut self, path: P) -> notify::Result<()> {
+    pub async fn async_watch<P: AsRef<Path>>(&mut self, paths: Vec<P>) -> notify::Result<()> {
         // Add a path to be watched. All files and directories at that path and
         // below will be monitored for changes.
-        self.watcher
-            .watch(path.as_ref(), RecursiveMode::Recursive)?;
+        paths.iter().map(|path| {
+            self.watcher
+                .lock()
+                .unwrap()
+                .watch(path.as_ref(), RecursiveMode::Recursive)
+                .unwrap();
+        });
 
         while let Some(res) = self.event_receiver.iter().next() {
             match res {
