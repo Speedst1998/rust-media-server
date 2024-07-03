@@ -16,7 +16,7 @@ use iced::futures::TryFutureExt;
 use log::info;
 use r2d2_sqlite::SqliteConnectionManager;
 use std::any;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread;
 use tokio::task;
@@ -24,7 +24,9 @@ use tokio::task;
 pub async fn start() -> std::io::Result<()> {
     // service::webservice::init().await;
 
-    let db_handler = Arc::new(DatabaseHandler::new(SqliteConnectionManager::file("file.db")));
+    let db_handler = Arc::new(DatabaseHandler::new(SqliteConnectionManager::file(
+        "file.db",
+    )));
     //Pooled connection probably should not be in the db_handler if we just get the connection from it
     //Maybe the WatchedFoldersDb should take a db handler
     let conn: r2d2::PooledConnection<SqliteConnectionManager> = db_handler.get_connection();
@@ -43,14 +45,14 @@ pub async fn start() -> std::io::Result<()> {
 
     let v = n.into_iter();
 
-    let b = v.map(|watched_folder| {
-        Path::new(watched_folder.path.as_str())
-    }).collect();
+    let b = v
+        .map(|watched_folder| PathBuf::from(watched_folder.path))
+        .collect();
 
-    thread::spawn(move ||{
+    thread::spawn(move || {
         info!("Starting folder watcher.");
         let runtime = tokio::runtime::Runtime::new().unwrap();
-        runtime.block_on(async {watcher.async_watch(b).await.unwrap()});
+        runtime.block_on(async { watcher.async_watch(b).await.unwrap() });
     });
 
     let server = HttpServer::new(|| {
