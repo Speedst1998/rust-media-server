@@ -81,7 +81,7 @@ pub async fn start() -> std::io::Result<()> {
     });
 
     info!("Starting ui.");
-    page::start(Flags { watched_folders_db }).unwrap();
+    page::start(Flags { watched_folders_db,  }).unwrap();
 
     server_handler.stop(false).await;
 

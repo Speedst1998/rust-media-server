@@ -33,7 +33,8 @@ impl<'a> FolderWatcher<'a> {
     pub async fn async_watch<P: AsRef<Path>>(&mut self, paths: Vec<P>) -> notify::Result<()> {
         // Add a path to be watched. All files and directories at that path and
         // below will be monitored for changes.
-        paths.iter().map(|path| {
+        let iterator = paths.iter();
+        iterator.for_each(|path| {
             self.watcher
                 .lock()
                 .unwrap()

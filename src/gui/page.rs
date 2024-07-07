@@ -1,10 +1,11 @@
 use std::{io, sync::Arc};
-
+use std::sync::mpsc::Sender;
 use iced::{
     executor,
     widget::{button, column, container, horizontal_space, row, text, Column},
     Application, Command, Element, Error, Length, Sandbox, Settings, Theme,
 };
+use notify::Event;
 use rusqlite::Error as SqlErr;
 use strum_macros::Display;
 
@@ -12,6 +13,7 @@ use crate::db::watched_folders_table::{self, WatchedFolder, WatchedFoldersDb};
 
 pub struct Flags {
     pub watched_folders_db: WatchedFoldersDb,
+    pub folder_watcher_notifier: Sender<WatchedFolder>
 }
 
 struct Page {
@@ -20,6 +22,7 @@ struct Page {
     counter: u8,
     path: String,
     error: Option<MyError>,
+    folder_watch_notifier: Sender<WatchedFolder>
 }
 
 #[derive(Debug, Clone)]
@@ -43,8 +46,12 @@ pub fn start(flags: Flags) -> Result<(), Error> {
 }
 
 impl Page {
-    fn refresh_folders_list(&mut self) {
-        self.watched_folders = self.watched_folders_db.list().unwrap()
+    fn refresh_watched_folder_list_ui(&mut self) {
+        self.watched_folders = self.watched_folders_db.list().unwrap();
+    }
+
+    fn notify_folder_watcher(&self, watched_folder: WatchedFolder, event: ) {
+        self.folder_watch_notifier.send(watched_folder).unwrap();
     }
 }
 
@@ -62,6 +69,7 @@ impl Application for Page {
                 counter: 0,
                 path: "".to_string(),
                 error: Option::None,
+                folder_watch_notifier: flags.folder_watcher_notifier
             },
             Command::none(),
         )
@@ -80,14 +88,15 @@ impl Application for Page {
             Message::OpenFilePicker => Command::perform(pick_file(), Message::SetPath),
             Message::DeleteFilePicker(path) => {
                 self.watched_folders_db.delete(&(path)); //TODO deal with this error
-                self.refresh_folders_list();
+                self.refresh_watched_folder_list_ui();
                 Command::none()
             }
             Message::SetPath(res) => {
                 match res {
                     Ok(path) => {
-                        self.watched_folders_db.create(&(path)).unwrap();
-                        self.refresh_folders_list();
+                        let resultFolder = self.watched_folders_db.create(&(path)).unwrap();
+                        self.refresh_watched_folder_list_ui();
+                        self.notify_folder_watcher(resultFolder);
                         self.path = path;
                     }
                     Err(err) => {
