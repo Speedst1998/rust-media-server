@@ -39,6 +39,8 @@ pub async fn start() -> std::io::Result<()> {
 
     let mut watcher: watcher::FolderWatcher = watcher::FolderWatcher::new().unwrap();
 
+    let folder_watcher_notifier = watcher.create_sender();
+
     let c = watched_folders_db.list();
 
     let n = c.unwrap();
@@ -81,7 +83,7 @@ pub async fn start() -> std::io::Result<()> {
     });
 
     info!("Starting ui.");
-    page::start(Flags { watched_folders_db,  }).unwrap();
+    page::start(Flags { watched_folders_db, folder_watcher_notifier }).unwrap();
 
     server_handler.stop(false).await;
 

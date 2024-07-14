@@ -1,3 +1,4 @@
+use log::info;
 use std::{io, sync::Arc};
 use std::sync::mpsc::Sender;
 use iced::{
@@ -50,7 +51,8 @@ impl Page {
         self.watched_folders = self.watched_folders_db.list().unwrap();
     }
 
-    fn notify_folder_watcher(&self, watched_folder: WatchedFolder, event: ) {
+    fn notify_folder_watcher(&self, watched_folder: WatchedFolder) {
+        info!("sent event: folder path : {}", watched_folder.path);
         self.folder_watch_notifier.send(watched_folder).unwrap();
     }
 }
@@ -95,7 +97,9 @@ impl Application for Page {
                 match res {
                     Ok(path) => {
                         let resultFolder = self.watched_folders_db.create(&(path)).unwrap();
+                        info!("before refrsh : {}", resultFolder.path);
                         self.refresh_watched_folder_list_ui();
+                        info!("beforesent event: folder path : {}",resultFolder.path);
                         self.notify_folder_watcher(resultFolder);
                         self.path = path;
                     }
